@@ -1,0 +1,1166 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RelatorioFaturacao.ViewModels"
+             xmlns:models="clr-namespace:RelatorioFaturacao.Models"
+             xmlns:conv="clr-namespace:RelatorioFaturacao.Converters"
+             x:Class="RelatorioFaturacao.MainPage"
+             x:Name="ThisPage">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <conv:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.BindingContext>
+        <vm:MainViewModel />
+    </ContentPage.BindingContext>
+
+    <Grid RowDefinitions="Auto,*" BackgroundColor="{StaticResource Background}">
+
+        <!-- ================= TOP PURPLE APP HEADER ================= -->
+        <Grid Grid.Row="0"
+              BackgroundColor="{StaticResource HeaderPurple}"
+              Padding="18,8"
+              ColumnDefinitions="Auto,*,Auto"
+              HeightRequest="52">
+
+            <!-- Left: Icon / Back / Title & Subtitle -->
+            <HorizontalStackLayout Grid.Column="0" Spacing="10" VerticalOptions="Center">
+                <Label Text="‹"
+                       FontSize="24"
+                       TextColor="{StaticResource White}"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
+                    <Label Text="Relatório de Faturação"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource White}" />
+                    <Label Text="Desenvolvido por Gonçalo Nuno Santos"
+                           FontSize="10"
+                           TextColor="#E0D4F7" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <!-- Right Header Action Icons (Settings, Theme, Info, Logs) -->
+            <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                <Button Text="📋"
+                        Style="{StaticResource HeaderIconButton}"
+                        Command="{Binding OpenLogsCommand}"
+                        ToolTipProperties.Text="Ver Registos e Logs de Execução" />
+                <Button Text="⚙"
+                        Style="{StaticResource HeaderIconButton}"
+                        Command="{Binding OpenSettingsCommand}"
+                        ToolTipProperties.Text="Configurar Base de Dados" />
+                <Button Text="🎨"
+                        Style="{StaticResource HeaderIconButton}"
+                        Clicked="OnThemeToggleClicked"
+                        ToolTipProperties.Text="Alternar Tema" />
+                <Button Text="ⓘ"
+                        Style="{StaticResource HeaderIconButton}"
+                        Command="{Binding OpenInfoCommand}"
+                        ToolTipProperties.Text="Informações &amp; Ajuda" />
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- ================= MAIN WORK AREA (EXPANDS TO FILL 100% OF AVAILABLE SCREEN SPACE) ================= -->
+        <Grid Grid.Row="1"
+              RowDefinitions="Auto,Auto,*,Auto"
+              Padding="16,10,16,12"
+              RowSpacing="10"
+              HorizontalOptions="Fill"
+              VerticalOptions="Fill">
+
+            <!-- 1. GROUPING BAR (Matching Image 'Grouping') -->
+            <Border Grid.Row="0"
+                    Style="{StaticResource CardStyle}"
+                    Padding="12,8"
+                    HorizontalOptions="Fill">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+
+                    <Label Grid.Column="0"
+                           Text="Agrupar por:"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray700}"
+                           VerticalOptions="Center" />
+
+                    <!-- Active Group Chips -->
+                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                        <!-- Placeholder if no groups -->
+                        <Label Text="Arraste ou selecione uma coluna ao lado para agrupar"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray400}"
+                               FontAttributes="Italic"
+                               VerticalOptions="Center"
+                               IsVisible="{Binding HasNoGroups}" />
+
+                        <!-- Active Group Badges with Close (✕) -->
+                        <BindableLayout.ItemsSource>
+                            <Binding Path="ActiveGroups" />
+                        </BindableLayout.ItemsSource>
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:GroupChipItem">
+                                <Border Style="{StaticResource ChipBorder}">
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <Label Text="{Binding Title}"
+                                               FontSize="12"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource ChipText}"
+                                               VerticalOptions="Center" />
+                                        <Button Text="✕"
+                                                FontSize="10"
+                                                TextColor="{StaticResource Gray500}"
+                                                BackgroundColor="Transparent"
+                                                Padding="0"
+                                                WidthRequest="16"
+                                                HeightRequest="16"
+                                                Command="{Binding BindingContext.RemoveGroupCommand, Source={x:Reference ThisPage}}"
+                                                CommandParameter="{Binding .}" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+
+                    <!-- Add Group Dropdown -->
+                    <Border Grid.Column="2"
+                            Stroke="{StaticResource GridBorder}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 4"
+                            BackgroundColor="{StaticResource SurfaceAlt}"
+                            Padding="8,2"
+                            VerticalOptions="Center">
+                        <Picker Title="+ Agrupar por"
+                                FontSize="12"
+                                TextColor="{StaticResource Gray700}"
+                                SelectedIndexChanged="OnAddGroupPickerChanged">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>Nenhum</x:String>
+                                    <x:String>Data</x:String>
+                                    <x:String>Estado</x:String>
+                                    <x:String>Tentativas</x:String>
+                                    <x:String>Ficheiro</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 2. SEARCH AS YOU TYPE & ACTIONS BAR (Matching Image) -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource CardStyle}"
+                    Padding="12,10"
+                    HorizontalOptions="Fill">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="12">
+
+                    <Label Grid.Row="0" Grid.Column="0"
+                           Text="Pesquisa em Tempo Real e Filtros"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray500}" />
+
+                    <!-- Search Input Pill -->
+                    <Grid Grid.Row="1" Grid.Column="0"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8"
+                          VerticalOptions="Center">
+
+                        <Border Grid.Column="0"
+                                Stroke="{StaticResource GridBorder}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 6"
+                                BackgroundColor="{StaticResource SurfaceAlt}"
+                                Padding="10,2">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                <Label Grid.Column="0"
+                                       Text="•"
+                                       FontSize="16"
+                                       TextColor="{StaticResource Primary}"
+                                       VerticalOptions="Center" />
+                                
+                                <Entry Grid.Column="1"
+                                       Text="{Binding SearchText}"
+                                       Placeholder="Pesquisar ficheiro, estado, data ou motivo..."
+                                       FontSize="13"
+                                       TextColor="{StaticResource Gray900}"
+                                       VerticalOptions="Center" />
+
+                                <Button Grid.Column="2"
+                                        Text="✕"
+                                        FontSize="12"
+                                        TextColor="{StaticResource Gray500}"
+                                        BackgroundColor="Transparent"
+                                        WidthRequest="24"
+                                        HeightRequest="24"
+                                        Padding="0"
+                                        Command="{Binding ClearSearchCommand}"
+                                        ToolTipProperties.Text="Limpar pesquisa" />
+
+                                <Label Grid.Column="3"
+                                       Text="︙"
+                                       FontSize="14"
+                                       TextColor="{StaticResource Gray400}"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Matches Counter (Matching 'Matches: 131' in Image) -->
+                        <Border Grid.Column="1"
+                                Stroke="{StaticResource PrimaryLight}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource Secondary}"
+                                Padding="8,4"
+                                VerticalOptions="Center">
+                            <Label Text="{Binding MatchCount, StringFormat='Resultados: {0}'}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Primary}"
+                                   VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Action Buttons (Pesquisar, Carregar TXT, Limpar Lista, Exportar) -->
+                    <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                        <Button Text="Pesquisar"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding SearchCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+
+                        <Button Text="Carregar TXT"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding SelectFileCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+
+                        <Button Text="Limpar Lista"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ClearListCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                                ToolTipProperties.Text="Limpar todos os dados e repor variáveis" />
+
+                        <Button Text="Exportar"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ExportCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+                    </HorizontalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- 3. TABLE / DATAGRID (EXPANDS TO FILL ALL REMAINING SCREEN HEIGHT) -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource CardStyle}"
+                    Padding="0"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill">
+                <Grid RowDefinitions="Auto,*" HorizontalOptions="Fill" VerticalOptions="Fill">
+
+                    <!-- GRID HEADER ROW WITH COLUMN FILTERS -->
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="*,160,150,80,100"
+                          BackgroundColor="{StaticResource GridHeaderBg}">
+
+                        <!-- Header: Nome do Ficheiro -->
+                        <Grid Grid.Column="0"
+                              ColumnDefinitions="*,Auto"
+                              Padding="14,10"
+                              BackgroundColor="{StaticResource GridHeaderBg}">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                                <Label Text="Nome do Ficheiro"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding SortNomeFicheiroHeaderColor}"
+                                       VerticalOptions="Center" />
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 3"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        Padding="4,1"
+                                        IsVisible="{Binding HasSortNomeFicheiro}"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding SortNomeFicheiroIndicator}"
+                                           FontSize="10"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Button Grid.Column="1"
+                                    Text="∇"
+                                    Style="{StaticResource FilterIconBtn}"
+                                    Command="{Binding OpenColumnFilterCommand}"
+                                    CommandParameter="NomeFicheiro"
+                                    ToolTipProperties.Text="Filtrar Ficheiro" />
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnColumnHeaderTapped" CommandParameter="NomeFicheiro" />
+                            </Grid.GestureRecognizers>
+                            <ToolTipProperties.Text>Clique para ordenar. Mantenha Shift ou Ctrl premido para ordenar por várias colunas.</ToolTipProperties.Text>
+                        </Grid>
+
+                        <!-- Header: Data de Processamento -->
+                        <Grid Grid.Column="1"
+                              ColumnDefinitions="*,Auto"
+                              Padding="12,10"
+                              BackgroundColor="{StaticResource GridHeaderBg}">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                                <Label Text="Data de Processamento"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding SortDataHeaderColor}"
+                                       VerticalOptions="Center" />
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 3"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        Padding="4,1"
+                                        IsVisible="{Binding HasSortData}"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding SortDataIndicator}"
+                                           FontSize="10"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Button Grid.Column="1"
+                                    Text="∇"
+                                    Style="{StaticResource FilterIconBtn}"
+                                    Command="{Binding OpenColumnFilterCommand}"
+                                    CommandParameter="DataProcessamento"
+                                    ToolTipProperties.Text="Filtrar Data" />
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnColumnHeaderTapped" CommandParameter="DataProcessamento" />
+                            </Grid.GestureRecognizers>
+                            <ToolTipProperties.Text>Clique para ordenar. Mantenha Shift ou Ctrl premido para ordenar por várias colunas.</ToolTipProperties.Text>
+                        </Grid>
+
+                        <!-- Header: Estado -->
+                        <Grid Grid.Column="2"
+                              ColumnDefinitions="*,Auto"
+                              Padding="12,10"
+                              BackgroundColor="{StaticResource GridHeaderBg}">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                                <Label Text="Estado"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding SortEstadoHeaderColor}"
+                                       VerticalOptions="Center" />
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 3"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        Padding="4,1"
+                                        IsVisible="{Binding HasSortEstado}"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding SortEstadoIndicator}"
+                                           FontSize="10"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Button Grid.Column="1"
+                                    Text="∇"
+                                    Style="{StaticResource FilterIconBtn}"
+                                    Command="{Binding OpenColumnFilterCommand}"
+                                    CommandParameter="Estado"
+                                    ToolTipProperties.Text="Filtrar Estado" />
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnColumnHeaderTapped" CommandParameter="Estado" />
+                            </Grid.GestureRecognizers>
+                            <ToolTipProperties.Text>Clique para ordenar. Mantenha Shift ou Ctrl premido para ordenar por várias colunas.</ToolTipProperties.Text>
+                        </Grid>
+
+                        <!-- Header: Tentativas -->
+                        <Grid Grid.Column="3"
+                              ColumnDefinitions="*,Auto"
+                              Padding="10,10"
+                              BackgroundColor="{StaticResource GridHeaderBg}">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label Text="Tentativas"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding SortRetryHeaderColor}"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalOptions="Center" />
+                                <Border StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 3"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        Padding="4,1"
+                                        IsVisible="{Binding HasSortRetry}"
+                                        VerticalOptions="Center">
+                                    <Label Text="{Binding SortRetryIndicator}"
+                                           FontSize="10"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Button Grid.Column="1"
+                                    Text="∇"
+                                    Style="{StaticResource FilterIconBtn}"
+                                    Command="{Binding OpenColumnFilterCommand}"
+                                    CommandParameter="numRetry"
+                                    ToolTipProperties.Text="Filtrar Tentativas" />
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnColumnHeaderTapped" CommandParameter="numRetry" />
+                            </Grid.GestureRecognizers>
+                            <ToolTipProperties.Text>Clique para ordenar. Mantenha Shift ou Ctrl premido para ordenar por várias colunas.</ToolTipProperties.Text>
+                        </Grid>
+
+                        <!-- Header: Ações / Detalhes -->
+                        <Grid Grid.Column="4"
+                              Padding="10,10"
+                              BackgroundColor="{StaticResource GridHeaderBg}">
+                            <Label Text="Detalhes"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray700}"
+                                   HorizontalTextAlignment="Center"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Grid>
+
+                    <!-- GRID ROWS COLLECTIONVIEW -->
+                    <CollectionView Grid.Row="1"
+                                    ItemsSource="{Binding DisplayItems}"
+                                    BackgroundColor="Transparent"
+                                    SelectionMode="None"
+                                    VerticalOptions="Fill">
+                        <CollectionView.EmptyView>
+                            <VerticalStackLayout HorizontalOptions="Center"
+                                                 VerticalOptions="Center"
+                                                 Padding="40"
+                                                 Spacing="8">
+                                <Label Text="Nenhum registo encontrado."
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource Gray600}"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Text="Altere os critérios de pesquisa ou carregue dados via base de dados/TXT."
+                                       FontSize="12"
+                                       TextColor="{StaticResource Gray400}"
+                                       HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </CollectionView.EmptyView>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:LogItemViewModel">
+                                <VerticalStackLayout Spacing="0">
+                                    <!-- Row Container with highlighted yellow background when matching search query -->
+                                    <Grid ColumnDefinitions="*,160,150,80,100"
+                                          BackgroundColor="{Binding RowBackground}"
+                                          Padding="0"
+                                          MinimumHeightRequest="38">
+                                        <FlyoutBase.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="📋 Copiar Nome do Ficheiro"
+                                                                Command="{Binding BindingContext.CopyFileNameCommand, Source={x:Reference ThisPage}}"
+                                                                CommandParameter="{Binding .}" />
+                                                <MenuFlyoutItem Text="📑 Copiar Linha Completa"
+                                                                Command="{Binding BindingContext.CopyRowCommand, Source={x:Reference ThisPage}}"
+                                                                CommandParameter="{Binding .}" />
+                                            </MenuFlyout>
+                                        </FlyoutBase.ContextFlyout>
+
+                                        <!-- Ficheiro with copy button + highlighted spans -->
+                                        <Grid Grid.Column="0"
+                                              ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="8"
+                                              Padding="10,6"
+                                              VerticalOptions="Center">
+                                            <Button Grid.Column="0"
+                                                    Text="📋"
+                                                    FontSize="11"
+                                                    TextColor="{StaticResource Primary}"
+                                                    BackgroundColor="{StaticResource Secondary}"
+                                                    BorderColor="{StaticResource PrimaryLight}"
+                                                    BorderWidth="1"
+                                                    CornerRadius="4"
+                                                    WidthRequest="28"
+                                                    HeightRequest="28"
+                                                    Padding="0"
+                                                    VerticalOptions="Center"
+                                                    Command="{Binding BindingContext.CopyFileNameCommand, Source={x:Reference ThisPage}}"
+                                                    CommandParameter="{Binding .}"
+                                                    ToolTipProperties.Text="Copiar Nome do Ficheiro (Clique para copiar)" />
+
+                                            <Label Grid.Column="1"
+                                                   FormattedText="{Binding NomeFicheiroFormatted}"
+                                                   VerticalOptions="Center"
+                                                   FontSize="13"
+                                                   MaxLines="1"
+                                                   LineBreakMode="TailTruncation"
+                                                   ToolTipProperties.Text="Clique com o botão direito para opções de cópia ou no ícone 📋">
+                                                <Label.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding BindingContext.CopyFileNameCommand, Source={x:Reference ThisPage}}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Label.GestureRecognizers>
+                                            </Label>
+                                        </Grid>
+
+                                        <!-- Data -->
+                                        <Label Grid.Column="1"
+                                               Text="{Binding DataFormatada}"
+                                               Padding="12,8"
+                                               VerticalOptions="Center"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray600}"
+                                               MaxLines="1"
+                                               LineBreakMode="TailTruncation" />
+
+                                        <!-- Estado: Botão interativo se Erro / Badge se OK -->
+                                        <Grid Grid.Column="2" Padding="8,4" VerticalOptions="Center" HorizontalOptions="Start">
+                                            <!-- Botão de Erro / Rejeitado clicável -->
+                                            <Button Text="{Binding EstadoButtonText}"
+                                                    FontSize="11"
+                                                    FontAttributes="Bold"
+                                                    TextColor="{StaticResource DangerText}"
+                                                    BackgroundColor="{StaticResource DangerBg}"
+                                                    BorderColor="{StaticResource Danger}"
+                                                    BorderWidth="1"
+                                                    CornerRadius="4"
+                                                    Padding="8,2"
+                                                    HeightRequest="28"
+                                                    MinimumHeightRequest="28"
+                                                    IsVisible="{Binding IsErro}"
+                                                    Command="{Binding BindingContext.OpenErrorModalCommand, Source={x:Reference ThisPage}}"
+                                                    CommandParameter="{Binding .}"
+                                                    ToolTipProperties.Text="Clique para ver os detalhes deste erro" />
+
+                                            <!-- Badge de Sucesso / OK -->
+                                            <Border Stroke="{StaticResource Success}"
+                                                    StrokeThickness="1"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    BackgroundColor="{StaticResource SuccessBg}"
+                                                    Padding="8,4"
+                                                    HeightRequest="28"
+                                                    MinimumHeightRequest="28"
+                                                    IsVisible="{Binding IsOk}"
+                                                    VerticalOptions="Center"
+                                                    HorizontalOptions="Start">
+                                                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                    <Label Text="✓"
+                                                           FontSize="10"
+                                                           TextColor="{StaticResource SuccessText}"
+                                                           VerticalOptions="Center" />
+                                                    <Label Text="{Binding EstadoDisplay}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource SuccessText}"
+                                                           VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- numRetry -->
+                                        <Label Grid.Column="3"
+                                               Text="{Binding numRetry}"
+                                               Padding="10,8"
+                                               FontSize="12"
+                                               HorizontalTextAlignment="Center"
+                                               VerticalOptions="Center"
+                                               TextColor="{StaticResource Gray600}" />
+
+                                        <!-- Ações / Ver Erro Button -->
+                                        <Grid Grid.Column="4" Padding="8,4" VerticalOptions="Center" HorizontalOptions="Center">
+                                            <Button Text="Ver Erro"
+                                                    FontSize="11"
+                                                    TextColor="{StaticResource DangerText}"
+                                                    BackgroundColor="{StaticResource DangerBg}"
+                                                    BorderColor="{StaticResource Danger}"
+                                                    BorderWidth="1"
+                                                    CornerRadius="4"
+                                                    Padding="8,2"
+                                                    HeightRequest="28"
+                                                    MinimumHeightRequest="28"
+                                                    IsVisible="{Binding IsErro}"
+                                                    Command="{Binding BindingContext.OpenErrorModalCommand, Source={x:Reference ThisPage}}"
+                                                    CommandParameter="{Binding .}"
+                                                    ToolTipProperties.Text="Clique para ver o detalhe deste erro" />
+
+                                            <Label Text="—"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource Gray400}"
+                                                   HorizontalTextAlignment="Center"
+                                                   VerticalOptions="Center"
+                                                   IsVisible="{Binding IsOk}" />
+                                        </Grid>
+                                    </Grid>
+
+                                    <!-- Thin Grid Cell Border Divider -->
+                                    <BoxView HeightRequest="1" Color="{StaticResource GridBorder}" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Border>
+
+            <!-- 4. BOTTOM STATUS / FOOTER BAR -->
+            <Grid Grid.Row="3"
+                  ColumnDefinitions="Auto,*,Auto"
+                  Padding="4,2,4,0"
+                  VerticalOptions="Center">
+
+                <Label Grid.Column="0"
+                       Text="{Binding MatchSummary}"
+                       FontSize="11"
+                       TextColor="{StaticResource Gray600}"
+                       VerticalOptions="Center" />
+
+                <Label Grid.Column="2"
+                       Text="Desenvolvido por Gonçalo Nuno Santos"
+                       FontSize="11"
+                       TextColor="{StaticResource Gray500}"
+                       FontAttributes="Italic"
+                       VerticalOptions="Center" />
+            </Grid>
+        </Grid>
+
+        <!-- ================= COLUMN FILTER POPUP / FLYOUT (Matching Image Center Popup) ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#50000000"
+              IsVisible="{Binding IsFilterPopupOpen}">
+            
+            <Border WidthRequest="320"
+                    MaximumHeightRequest="480"
+                    Stroke="{StaticResource GridBorder}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="16"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    Shadow="{StaticResource CardStyle}">
+
+                <Grid RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="10">
+
+                    <!-- Header with Select All & Close (✕) -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" VerticalOptions="Center">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding ActiveColumnFilter.SelectAll}" VerticalOptions="Center" />
+                            <Label Text="Selecionar Todos"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray800}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+
+                        <Label Grid.Column="1"
+                               Text="{Binding ActiveColumnFilter.ColumnTitle, StringFormat='({0})'}"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               VerticalOptions="Center" />
+
+                        <Button Grid.Column="2"
+                                Text="✕"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                BackgroundColor="Transparent"
+                                WidthRequest="24"
+                                HeightRequest="24"
+                                Padding="0"
+                                Command="{Binding CloseFilterPopupCommand}" />
+                    </Grid>
+
+                    <BoxView Grid.Row="1" HeightRequest="1" Color="{StaticResource GridBorder}" />
+
+                    <!-- Distinct Values Scrollable Checklist -->
+                    <ScrollView Grid.Row="1" MaximumHeightRequest="150">
+                        <VerticalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding ActiveColumnFilter.DistinctValues}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:FilterValueItem">
+                                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                        <Label Text="{Binding DisplayText}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray700}"
+                                               VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <!-- Section: Show rows with value that: -->
+                    <VerticalStackLayout Grid.Row="2" Spacing="4">
+                        <Label Text="Mostrar linhas com valor que:"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray600}" />
+
+                        <!-- Operator Picker -->
+                        <Border Stroke="{StaticResource GridBorder}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource SurfaceAlt}"
+                                Padding="8,2">
+                            <Picker SelectedItem="{Binding ActiveColumnFilter.FilterOperator}"
+                                    FontSize="12"
+                                    TextColor="{StaticResource Gray800}">
+                                <Picker.ItemsSource>
+                                    <x:Array Type="{x:Type x:String}">
+                                        <x:String>É igual a</x:String>
+                                        <x:String>Contém</x:String>
+                                        <x:String>Começa com</x:String>
+                                        <x:String>Termina com</x:String>
+                                        <x:String>Não contém</x:String>
+                                    </x:Array>
+                                </Picker.ItemsSource>
+                            </Picker>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Text Criteria Input with aA button -->
+                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <Border Grid.Column="0"
+                                Stroke="{StaticResource GridBorder}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource SurfaceAlt}"
+                                Padding="8,2">
+                            <Entry Text="{Binding ActiveColumnFilter.FilterText}"
+                                   Placeholder="Introduza o critério de filtro..."
+                                   FontSize="12"
+                                   TextColor="{StaticResource Gray900}" />
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Stroke="{StaticResource PrimaryLight}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource Primary}"
+                                Padding="8,4"
+                                VerticalOptions="Center">
+                            <Label Text="aA"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource White}"
+                                   HorizontalTextAlignment="Center" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Condition Selector -->
+                    <Border Grid.Row="4"
+                            Stroke="{StaticResource GridBorder}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 4"
+                            BackgroundColor="{StaticResource SurfaceAlt}"
+                            Padding="8,2">
+                        <Picker SelectedItem="{Binding ActiveColumnFilter.Condition}"
+                                FontSize="12"
+                                TextColor="{StaticResource Gray800}">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>E</x:String>
+                                    <x:String>Ou</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+                    </Border>
+
+                    <!-- Bottom Buttons (Limpar & Aplicar) -->
+                    <Grid Grid.Row="5" ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,6,0,0">
+                        <Button Grid.Column="0"
+                                Text="Limpar"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ClearFilterCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Aplicar"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding ApplyFilterCommand}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================= ERROR DETAILS MODAL ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#60000000"
+              IsVisible="{Binding IsErrorModalOpen}">
+            <Border WidthRequest="560"
+                    MaximumWidthRequest="720"
+                    Stroke="{StaticResource Danger}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="22"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    Shadow="{StaticResource CardStyle}">
+                <VerticalStackLayout Spacing="14">
+                    <!-- Header -->
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 18"
+                                BackgroundColor="{StaticResource DangerBg}"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+                            <Label Text="⚠"
+                                   FontSize="18"
+                                   TextColor="{StaticResource Danger}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label Text="Detalhes do Erro de Assinatura"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource DangerText}" />
+                            <Label Text="Informação detalhada sobre a falha no processamento do ficheiro."
+                                   FontSize="11"
+                                   TextColor="{StaticResource MutedText}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="2"
+                                Text="✕"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                BackgroundColor="Transparent"
+                                WidthRequest="28"
+                                HeightRequest="28"
+                                Padding="0"
+                                Command="{Binding CloseErrorModalCommand}" />
+                    </Grid>
+
+                    <BoxView HeightRequest="1" Color="{StaticResource GridBorder}" />
+
+                    <!-- File & Status Metadata -->
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" RowSpacing="10" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2">
+                            <Label Text="Nome do Ficheiro:" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="{Binding SelectedErrorItem.NomeFicheiro}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource Gray900}" LineBreakMode="TailTruncation" VerticalOptions="Center" />
+                                <Button Grid.Column="1"
+                                        Text="📋"
+                                        FontSize="11"
+                                        TextColor="{StaticResource Primary}"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        BorderColor="{StaticResource PrimaryLight}"
+                                        BorderWidth="1"
+                                        CornerRadius="4"
+                                        WidthRequest="28"
+                                        HeightRequest="26"
+                                        Padding="0"
+                                        Command="{Binding CopyFileNameCommand}"
+                                        CommandParameter="{Binding SelectedErrorItem.NomeFicheiro}"
+                                        ToolTipProperties.Text="Copiar nome do ficheiro" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
+                            <Label Text="Data de Processamento:" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding SelectedErrorItem.DataFormatada}" FontSize="13" TextColor="{StaticResource Gray800}" />
+                        </VerticalStackLayout>
+
+                        <HorizontalStackLayout Grid.Row="1" Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <Label Text="Estado:" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                            <Border BackgroundColor="{StaticResource DangerBg}" Stroke="{StaticResource Danger}" StrokeThickness="1" StrokeShape="RoundRectangle 4" Padding="8,2">
+                                <Label Text="{Binding SelectedErrorItem.EstadoDisplay}" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource DangerText}" />
+                            </Border>
+                        </HorizontalStackLayout>
+
+                        <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                            <Label Text="N.º de Tentativas:" FontSize="11" FontAttributes="Bold" TextColor="{StaticResource Gray500}" VerticalOptions="Center" />
+                            <Label Text="{Binding SelectedErrorItem.numRetry}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource Gray800}" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <!-- Error Message Box -->
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Diagnóstico / Mensagem do Erro:"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray700}" />
+                        
+                        <Border Stroke="{StaticResource Danger}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 6"
+                                BackgroundColor="#FFF8F8"
+                                Padding="12">
+                            <ScrollView MaximumHeightRequest="250">
+                                <Label Text="{Binding SelectedErrorItem.MensagemErro}"
+                                       FontSize="12"
+                                       TextColor="{StaticResource DangerText}"
+                                       LineBreakMode="WordWrap" />
+                            </ScrollView>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Bottom Buttons -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="0,6,0,0">
+                        <Button Grid.Column="1"
+                                Text="📋 Copiar Erro"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding CopyErrorCommand}"
+                                ToolTipProperties.Text="Copiar detalhes do erro para a área de transferência" />
+
+                        <Button Grid.Column="2"
+                                Text="Fechar"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding CloseErrorModalCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- ================= SETTINGS MODAL ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#50000000"
+              IsVisible="{Binding IsSettingsOpen}">
+
+            <Border WidthRequest="420"
+                    Stroke="{StaticResource GridBorder}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="20"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center">
+
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0"
+                               Text="Definições da Base de Dados"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray900}" />
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                BackgroundColor="Transparent"
+                                WidthRequest="24"
+                                HeightRequest="24"
+                                Padding="0"
+                                Command="{Binding CloseSettingsCommand}" />
+                    </Grid>
+
+                    <Label Text="Configure a Connection String do SQL Server:"
+                           FontSize="12"
+                           TextColor="{StaticResource Gray600}" />
+
+                    <Border Stroke="{StaticResource GridBorder}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 6"
+                            BackgroundColor="{StaticResource SurfaceAlt}"
+                            Padding="10">
+                        <Editor Text="{Binding ConnectionString}"
+                                Placeholder="Server=...;Database=...;User Id=...;Password=...;"
+                                HeightRequest="80"
+                                FontSize="12"
+                                TextColor="{StaticResource Gray900}" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                        <Button Grid.Column="0"
+                                Text="Cancelar"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding CloseSettingsCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Guardar"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding SaveSettingsCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- ================= INFO MODAL ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#50000000"
+              IsVisible="{Binding IsInfoOpen}">
+
+            <Border WidthRequest="380"
+                    Stroke="{StaticResource GridBorder}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="20"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center">
+
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0"
+                               Text="Sobre o Relatório de Faturação"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray900}" />
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                BackgroundColor="Transparent"
+                                WidthRequest="24"
+                                HeightRequest="24"
+                                Padding="0"
+                                Command="{Binding CloseInfoCommand}" />
+                    </Grid>
+
+                    <Label Text="• Otimização de ecrã inteiro com grelha de dados fluida e cabeçalhos fixos."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Visualização completa e cópia de detalhes de erro para ficheiros com falhas."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Pesquisa em tempo real com realce de texto."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Ordenação simples e multi-coluna (clique no cabeçalho ou Shift+Clique para múltiplas colunas)."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Filtragem por coluna com checklist de valores únicos e critérios customizados."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Agrupamento dinâmico com etiquetas removíveis."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+                    <Label Text="• Exportação para ficheiro Excel (.xlsx) incluindo mensagens de erro."
+                           FontSize="12"
+                           TextColor="{StaticResource Gray700}" />
+
+                    <BoxView HeightRequest="1" Color="{StaticResource GridBorder}" Margin="0,4" />
+                    
+                    <Label Text="Desenvolvido por Gonçalo Nuno Santos"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalTextAlignment="Center" />
+
+                    <Button Text="Fechar"
+                            Style="{StaticResource PrimaryButton}"
+                            Command="{Binding CloseInfoCommand}"
+                            Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- ================= LOGS MODAL ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#50000000"
+              IsVisible="{Binding IsLogsModalOpen}">
+
+            <Border WidthRequest="780"
+                    HeightRequest="560"
+                    Stroke="{StaticResource GridBorder}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="20"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center">
+
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                    <!-- Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="📋 Registos de Execução (Logs)"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900}" />
+                            <Label Text="Diagnóstico detalhado de operações, consultas SQL, tempos de execução e exceções."
+                                   FontSize="11"
+                                   TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                FontSize="14"
+                                TextColor="{StaticResource Gray500}"
+                                BackgroundColor="Transparent"
+                                WidthRequest="24"
+                                HeightRequest="24"
+                                Padding="0"
+                                Command="{Binding CloseLogsCommand}" />
+                    </Grid>
+
+                    <!-- Log text area -->
+                    <Border Grid.Row="1"
+                            Stroke="{StaticResource GridBorder}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 6"
+                            BackgroundColor="#18181B"
+                            Padding="10">
+                        <ScrollView>
+                            <Label Text="{Binding LogContentText}"
+                                   FontFamily="Consolas"
+                                   FontSize="11"
+                                   TextColor="#22C55E"
+                                   LineBreakMode="CharacterWrap" />
+                        </ScrollView>
+                    </Border>
+
+                    <!-- Action Buttons -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Text="🔄 Atualizar"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding RefreshLogsCommand}"
+                                ToolTipProperties.Text="Recarregar logs mais recentes" />
+
+                        <Button Grid.Column="1"
+                                Text="📄 Abrir Ficheiro"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding OpenLogFileCommand}"
+                                ToolTipProperties.Text="Abrir ficheiro de log no Bloco de Notas / Editor padrão" />
+
+                        <Button Grid.Column="2"
+                                Text="📁 Abrir Pasta"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding OpenLogsFolderCommand}"
+                                ToolTipProperties.Text="Abrir a pasta que contém os ficheiros de log" />
+
+                        <Button Grid.Column="3"
+                                Text="🗑 Limpar"
+                                Style="{StaticResource SecondaryButton}"
+                                Command="{Binding ClearLogsCommand}"
+                                ToolTipProperties.Text="Limpar o ficheiro de logs" />
+
+                        <Button Grid.Column="5"
+                                Text="Fechar"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding CloseLogsCommand}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================= BUSY / LOADING OVERLAY ================= -->
+        <Grid Grid.RowSpan="2"
+              BackgroundColor="#66F4F5F8"
+              IsVisible="{Binding IsBusy}">
+            <Border Padding="24"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource GridBorder}"
+                    BackgroundColor="{StaticResource Surface}"
+                    StrokeShape="RoundRectangle 8"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    MaximumWidthRequest="500">
+                <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       Color="{StaticResource Primary}"
+                                       HeightRequest="36"
+                                       WidthRequest="36" />
+                    <Label Text="A processar dados..."
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray900}"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="{Binding BusyMessage}"
+                           FontSize="11"
+                           TextColor="{StaticResource Gray600}"
+                           HorizontalTextAlignment="Center"
+                           IsVisible="{Binding HasBusyMessage}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+    </Grid>
+</ContentPage>

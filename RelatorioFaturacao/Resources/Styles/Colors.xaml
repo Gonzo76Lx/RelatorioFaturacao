@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Theme Colors matching Image (Purple & Slate Modern DataGrid Style) -->
+    <Color x:Key="Primary">#6841CA</Color>
+    <Color x:Key="PrimaryDark">#4F2A9E</Color>
+    <Color x:Key="PrimaryLight">#8B68E6</Color>
+    <Color x:Key="PrimaryDarkText">#FFFFFF</Color>
+    <Color x:Key="Secondary">#F3EFFD</Color>
+    <Color x:Key="SecondaryDarkText">#1E293B</Color>
+    <Color x:Key="Tertiary">#E2E8F0</Color>
+
+    <!-- Header & Brand Purple -->
+    <Color x:Key="HeaderPurple">#653FA0</Color>
+    <Color x:Key="HeaderPurpleDark">#512DA8</Color>
+    <Color x:Key="HeaderPurpleLight">#7E57C2</Color>
+    
+    <!-- Status Colors -->
+    <Color x:Key="Success">#16A34A</Color>
+    <Color x:Key="SuccessBg">#E6F4EA</Color>
+    <Color x:Key="SuccessText">#137333</Color>
+    <Color x:Key="Danger">#DC2626</Color>
+    <Color x:Key="DangerBg">#FCE8E6</Color>
+    <Color x:Key="DangerText">#C5221F</Color>
+    <Color x:Key="Warning">#D97706</Color>
+    <Color x:Key="WarningBg">#FEF7E0</Color>
+
+    <!-- Highlight Colors -->
+    <Color x:Key="HighlightYellow">#FEF6D8</Color>
+    <Color x:Key="HighlightRed">#C5221F</Color>
+    <Color x:Key="HighlightBadgeBg">#EDE7F6</Color>
+    <Color x:Key="HighlightBadgeText">#5E35B1</Color>
+
+    <!-- Backgrounds & Grid -->
+    <Color x:Key="Background">#F4F5F8</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceAlt">#F8F9FA</Color>
+    <Color x:Key="GridHeaderBg">#EFF1F5</Color>
+    <Color x:Key="GridHeaderHover">#E4E7ED</Color>
+    <Color x:Key="GridRowAlt">#FAFBFC</Color>
+    <Color x:Key="GridBorder">#E1E4E8</Color>
+    <Color x:Key="ChipBg">#EDEBF2</Color>
+    <Color x:Key="ChipBorder">#D7D4E4</Color>
+    <Color x:Key="ChipText">#4A3E68</Color>
+
+    <!-- Base Monochromes -->
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#0F172A</Color>
+    <Color x:Key="Magenta">#7C3AED</Color>
+    <Color x:Key="MidnightBlue">#0F172A</Color>
+    <Color x:Key="OffBlack">#111827</Color>
+
+    <Color x:Key="Gray50">#F8FAFC</Color>
+    <Color x:Key="Gray100">#F1F5F9</Color>
+    <Color x:Key="Gray200">#E2E8F0</Color>
+    <Color x:Key="Gray300">#CBD5E1</Color>
+    <Color x:Key="Gray400">#94A3B8</Color>
+    <Color x:Key="Gray500">#64748B</Color>
+    <Color x:Key="Gray600">#475569</Color>
+    <Color x:Key="Gray700">#334155</Color>
+    <Color x:Key="Gray800">#1E293B</Color>
+    <Color x:Key="Gray900">#0F172A</Color>
+    <Color x:Key="Gray950">#020617</Color>
+
+    <Color x:Key="Border">#D8DEE8</Color>
+    <Color x:Key="MutedText">#64748B</Color>
+    <Color x:Key="SoftShadow">#150F172A</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDark}"/>
+    <SolidColorBrush x:Key="HeaderPurpleBrush" Color="{StaticResource HeaderPurple}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
+    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
+    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface}"/>
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="{StaticResource SurfaceAlt}"/>
+    <SolidColorBrush x:Key="GridHeaderBgBrush" Color="{StaticResource GridHeaderBg}"/>
+    <SolidColorBrush x:Key="GridBorderBrush" Color="{StaticResource GridBorder}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource Border}"/>
+    <SolidColorBrush x:Key="HighlightYellowBrush" Color="{StaticResource HighlightYellow}"/>
+    <SolidColorBrush x:Key="ChipBgBrush" Color="{StaticResource ChipBg}"/>
+
+    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
+    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
+    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
+    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
+    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
+    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
+    <SolidColorBrush x:Key="Gray700Brush" Color="{StaticResource Gray700}"/>
+    <SolidColorBrush x:Key="Gray800Brush" Color="{StaticResource Gray800}"/>
+    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
+    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+</ResourceDictionary>
