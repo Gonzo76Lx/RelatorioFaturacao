@@ -156,7 +156,7 @@
                     Style="{StaticResource CardStyle}"
                     Padding="12,10"
                     HorizontalOptions="Fill">
-                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="12">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
 
                     <Label Grid.Row="0" Grid.Column="0"
                            Text="Pesquisa em Tempo Real e Filtros"
@@ -248,6 +248,106 @@
                                 Command="{Binding ExportCommand}"
                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
                     </HorizontalStackLayout>
+
+                    <!-- Date Range Filter Bar (Row 2) -->
+                    <Grid Grid.Row="2" Grid.ColumnSpan="2"
+                          ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+                          ColumnSpacing="10"
+                          VerticalOptions="Center">
+
+                        <!-- CheckBox Limitar por datas -->
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding UseDateFilter}"
+                                      VerticalOptions="Center" />
+                            <Label Text="Filtrar por intervalo de datas"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray700}"
+                                   VerticalOptions="Center">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ToggleDateFilterCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </HorizontalStackLayout>
+
+                        <!-- Data Inferior / De: -->
+                        <Label Grid.Column="1"
+                               Text="De:"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray600}"
+                               VerticalOptions="Center" />
+
+                        <Border Grid.Column="2"
+                                Stroke="{StaticResource GridBorder}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource SurfaceAlt}"
+                                Padding="8,2"
+                                VerticalOptions="Center">
+                            <DatePicker Date="{Binding StartDate}"
+                                        Format="yyyy-MM-dd"
+                                        FontSize="12"
+                                        TextColor="{StaticResource Gray800}"
+                                        IsEnabled="{Binding UseDateFilter}"
+                                        VerticalOptions="Center" />
+                        </Border>
+
+                        <!-- Data Superior / Até: -->
+                        <Label Grid.Column="3"
+                               Text="Até:"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray600}"
+                               VerticalOptions="Center" />
+
+                        <Border Grid.Column="4"
+                                Stroke="{StaticResource GridBorder}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 4"
+                                BackgroundColor="{StaticResource SurfaceAlt}"
+                                Padding="8,2"
+                                VerticalOptions="Center">
+                            <DatePicker Date="{Binding EndDate}"
+                                        Format="yyyy-MM-dd"
+                                        FontSize="12"
+                                        TextColor="{StaticResource Gray800}"
+                                        IsEnabled="{Binding UseDateFilter}"
+                                        VerticalOptions="Center" />
+                        </Border>
+
+                        <!-- Atalhos Rápidos (Hoje, 7 dias, 30 dias, Este Mês) -->
+                        <HorizontalStackLayout Grid.Column="5" Spacing="6" HorizontalOptions="End" VerticalOptions="Center">
+                            <Button Text="Hoje"
+                                    Style="{StaticResource SecondaryButton}"
+                                    HeightRequest="28"
+                                    MinimumHeightRequest="28"
+                                    Padding="8,2"
+                                    FontSize="11"
+                                    Command="{Binding SetTodayCommand}" />
+                            <Button Text="Últimos 7 dias"
+                                    Style="{StaticResource SecondaryButton}"
+                                    HeightRequest="28"
+                                    MinimumHeightRequest="28"
+                                    Padding="8,2"
+                                    FontSize="11"
+                                    Command="{Binding SetLast7DaysCommand}" />
+                            <Button Text="Últimos 30 dias"
+                                    Style="{StaticResource SecondaryButton}"
+                                    HeightRequest="28"
+                                    MinimumHeightRequest="28"
+                                    Padding="8,2"
+                                    FontSize="11"
+                                    Command="{Binding SetLast30DaysCommand}" />
+                            <Button Text="Este Mês"
+                                    Style="{StaticResource SecondaryButton}"
+                                    HeightRequest="28"
+                                    MinimumHeightRequest="28"
+                                    Padding="8,2"
+                                    FontSize="11"
+                                    Command="{Binding SetThisMonthCommand}" />
+                        </HorizontalStackLayout>
+                    </Grid>
                 </Grid>
             </Border>
 

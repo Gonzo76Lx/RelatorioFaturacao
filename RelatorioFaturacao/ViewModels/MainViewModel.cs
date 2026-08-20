@@ -25,6 +25,9 @@ namespace RelatorioFaturacao.ViewModels
     {
         private string _connectionString = string.Empty;
         private string _searchText = string.Empty;
+        private bool _useDateFilter;
+        private DateTime _startDate = DateTime.Today.AddDays(-30);
+        private DateTime _endDate = DateTime.Today;
         private bool _isBusy;
         private string _busyMessage = string.Empty;
         private int _matchCount;
@@ -64,6 +67,12 @@ namespace RelatorioFaturacao.ViewModels
 
             SortCommand = new Command<string>(col => ToggleSort(col, false));
             ClearSortCommand = new Command(ClearSort);
+
+            ToggleDateFilterCommand = new Command(() => UseDateFilter = !UseDateFilter);
+            SetTodayCommand = new Command(() => { StartDate = DateTime.Today; EndDate = DateTime.Today; UseDateFilter = true; });
+            SetLast7DaysCommand = new Command(() => { StartDate = DateTime.Today.AddDays(-7); EndDate = DateTime.Today; UseDateFilter = true; });
+            SetLast30DaysCommand = new Command(() => { StartDate = DateTime.Today.AddDays(-30); EndDate = DateTime.Today; UseDateFilter = true; });
+            SetThisMonthCommand = new Command(() => { var now = DateTime.Today; StartDate = new DateTime(now.Year, now.Month, 1); EndDate = now; UseDateFilter = true; });
 
             AddGroupCommand = new Command<string>(AddGroup);
             RemoveGroupCommand = new Command<GroupChipItem>(RemoveGroup);
@@ -108,6 +117,48 @@ namespace RelatorioFaturacao.ViewModels
                 if (SetProperty(ref _searchText, value))
                 {
                     ApplyAllFilters();
+                }
+            }
+        }
+
+        public bool UseDateFilter
+        {
+            get => _useDateFilter;
+            set
+            {
+                if (SetProperty(ref _useDateFilter, value))
+                {
+                    ApplyAllFilters();
+                }
+            }
+        }
+
+        public DateTime StartDate
+        {
+            get => _startDate;
+            set
+            {
+                if (SetProperty(ref _startDate, value))
+                {
+                    if (UseDateFilter)
+                    {
+                        ApplyAllFilters();
+                    }
+                }
+            }
+        }
+
+        public DateTime EndDate
+        {
+            get => _endDate;
+            set
+            {
+                if (SetProperty(ref _endDate, value))
+                {
+                    if (UseDateFilter)
+                    {
+                        ApplyAllFilters();
+                    }
                 }
             }
         }
@@ -237,6 +288,12 @@ namespace RelatorioFaturacao.ViewModels
 
         public ICommand SortCommand { get; }
         public ICommand ClearSortCommand { get; }
+
+        public ICommand ToggleDateFilterCommand { get; }
+        public ICommand SetTodayCommand { get; }
+        public ICommand SetLast7DaysCommand { get; }
+        public ICommand SetLast30DaysCommand { get; }
+        public ICommand SetThisMonthCommand { get; }
 
         public ICommand AddGroupCommand { get; }
         public ICommand RemoveGroupCommand { get; }
@@ -739,10 +796,13 @@ namespace RelatorioFaturacao.ViewModels
             var hasSearch = !string.IsNullOrWhiteSpace(search);
             var activeFilters = ColumnFilters.Values.Where(f => f.IsActive).ToList();
             var hasActiveFilters = activeFilters.Count > 0;
+            var hasDateFilter = UseDateFilter;
+            var startBound = StartDate.Date;
+            var endBound = EndDate.Date.AddDays(1);
 
             List<LogItemViewModel> filtered;
 
-            if (!hasSearch && !hasActiveFilters)
+            if (!hasSearch && !hasActiveFilters && !hasDateFilter)
             {
                 filtered = new List<LogItemViewModel>(_masterLogs);
                 MatchCount = _masterLogs.Count;
@@ -754,6 +814,9 @@ namespace RelatorioFaturacao.ViewModels
 
                 foreach (var item in _masterLogs)
                 {
+                    if (hasDateFilter && (item.DataProcessamento < startBound || item.DataProcessamento >= endBound))
+                        continue;
+
                     if (hasSearch && !item.MatchesSearch(search))
                         continue;
 
@@ -890,24 +953,40 @@ namespace RelatorioFaturacao.ViewModels
             try
             {
                 var searchTrimmed = SearchText?.Trim() ?? string.Empty;
-                string countQuery;
-                string query;
-                string searchParam = $"%{searchTrimmed}%";
+                var whereClauses = new List<string>();
+                var sqlParams = new List<SqlParameter>();
 
-                if (string.IsNullOrWhiteSpace(searchTrimmed))
+                if (!string.IsNullOrWhiteSpace(searchTrimmed))
                 {
-                    countQuery = "SELECT COUNT(*) FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK)";
-                    query = "SELECT * FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK) ORDER BY DataProcessamento DESC";
-                    AppLogger.LogInfo("A preparar pesquisa geral (sem limite de TOP)...");
+                    whereClauses.Add("NomeFicheiro LIKE @search");
+                    sqlParams.Add(new SqlParameter("@search", $"%{searchTrimmed}%"));
+                }
+
+                if (UseDateFilter)
+                {
+                    whereClauses.Add("DataProcessamento >= @startDate AND DataProcessamento < @endDate");
+                    sqlParams.Add(new SqlParameter("@startDate", StartDate.Date));
+                    sqlParams.Add(new SqlParameter("@endDate", EndDate.Date.AddDays(1)));
+                }
+
+                string whereSql = whereClauses.Count > 0 ? " WHERE " + string.Join(" AND ", whereClauses) : "";
+                string countQuery = $"SELECT COUNT(*) FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK){whereSql}";
+                string query = $"SELECT * FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK){whereSql} ORDER BY DataProcessamento DESC";
+
+                if (UseDateFilter)
+                {
+                    AppLogger.LogInfo($"A preparar pesquisa com filtro por datas ({StartDate:yyyy-MM-dd} até {EndDate:yyyy-MM-dd})" + (!string.IsNullOrWhiteSpace(searchTrimmed) ? $" e filtro '{searchTrimmed}'..." : "..."));
+                }
+                else if (!string.IsNullOrWhiteSpace(searchTrimmed))
+                {
+                    AppLogger.LogInfo($"A preparar pesquisa filtrada por '{searchTrimmed}' (sem limite de TOP)...");
                 }
                 else
                 {
-                    countQuery = "SELECT COUNT(*) FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK) WHERE NomeFicheiro LIKE @search";
-                    query = "SELECT * FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK) WHERE NomeFicheiro LIKE @search ORDER BY DataProcessamento DESC";
-                    AppLogger.LogInfo($"A preparar pesquisa filtrada por '{searchTrimmed}' (sem limite de TOP)...");
+                    AppLogger.LogInfo("A preparar pesquisa geral (sem limite de TOP)...");
                 }
 
-                int totalCount = await Task.Run(async () => await FetchCount(countQuery, searchParam));
+                int totalCount = await Task.Run(async () => await FetchCount(countQuery, sqlParams));
                 AppLogger.LogInfo($"Total de registos encontrados na BD: {totalCount}.");
 
                 if (totalCount > LargeRecordCountThreshold)
@@ -934,7 +1013,7 @@ namespace RelatorioFaturacao.ViewModels
                     ? $"A carregar {totalCount:N0} registos da base de dados..."
                     : "A carregar registos da base de dados...";
 
-                var items = await Task.Run(async () => await FetchLogs(query, searchParam));
+                var items = await Task.Run(async () => await FetchLogs(query, sqlParams));
                 AppLogger.LogInfo($"Pesquisa devolveu {items.Count} registos.");
                 SetMasterLogs(items);
             }
@@ -1070,8 +1149,14 @@ namespace RelatorioFaturacao.ViewModels
                                 cmd.Parameters.AddWithValue(paramName, $"%{escapedTerm}%");
                             }
                             
-                            string commandText=$"SELECT * FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK) WHERE ({string.Join(" OR ", conditions)}) ORDER BY DataProcessamento DESC";
+                            string dateFilterClause = UseDateFilter ? " AND (DataProcessamento >= @startDate AND DataProcessamento < @endDate)" : "";
+                            string commandText = $"SELECT * FROM FaturacaoEletronica.dbo.LogsAssinaturaFicheiros WITH (NOLOCK) WHERE ({string.Join(" OR ", conditions)}){dateFilterClause} ORDER BY DataProcessamento DESC";
                             cmd.CommandText = commandText;
+                            if (UseDateFilter)
+                            {
+                                cmd.Parameters.AddWithValue("@startDate", StartDate.Date);
+                                cmd.Parameters.AddWithValue("@endDate", EndDate.Date.AddDays(1));
+                            }
 
                             int batchRows = 0;
                             using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -1181,7 +1266,7 @@ namespace RelatorioFaturacao.ViewModels
             }
         }
 
-        private async Task<List<LogAssinaturaFicheiro>> FetchLogs(string query, string searchParam)
+        private async Task<List<LogAssinaturaFicheiro>> FetchLogs(string query, IEnumerable<SqlParameter>? parameters = null)
         {
             var list = new List<LogAssinaturaFicheiro>();
             var sw = Stopwatch.StartNew();
@@ -1190,9 +1275,12 @@ namespace RelatorioFaturacao.ViewModels
             await conn.OpenAsync();
             using var cmd = new SqlCommand(query, conn);
             cmd.CommandTimeout = 300; // 5 minutes timeout
-            if (query.Contains("@search"))
+            if (parameters != null)
             {
-                cmd.Parameters.AddWithValue("@search", searchParam);
+                foreach (var p in parameters)
+                {
+                    cmd.Parameters.Add(new SqlParameter(p.ParameterName, p.Value));
+                }
             }
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -1205,16 +1293,19 @@ namespace RelatorioFaturacao.ViewModels
             return list;
         }
 
-        private async Task<int> FetchCount(string query, string searchParam)
+        private async Task<int> FetchCount(string query, IEnumerable<SqlParameter>? parameters = null)
         {
             var sw = Stopwatch.StartNew();
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
             using var cmd = new SqlCommand(query, conn);
             cmd.CommandTimeout = 300; // 5 minutes timeout
-            if (query.Contains("@search"))
+            if (parameters != null)
             {
-                cmd.Parameters.AddWithValue("@search", searchParam);
+                foreach (var p in parameters)
+                {
+                    cmd.Parameters.Add(new SqlParameter(p.ParameterName, p.Value));
+                }
             }
 
             var result = await cmd.ExecuteScalarAsync();
