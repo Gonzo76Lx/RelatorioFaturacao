@@ -958,7 +958,7 @@ namespace RelatorioFaturacao.ViewModels
 
                 if (!string.IsNullOrWhiteSpace(searchTrimmed))
                 {
-                    whereClauses.Add("NomeFicheiro LIKE @search");
+                    whereClauses.Add("(NomeFicheiro LIKE @search OR Estado LIKE @search)");
                     sqlParams.Add(new SqlParameter("@search", $"%{searchTrimmed}%"));
                 }
 

@@ -23,7 +23,6 @@ namespace RelatorioFaturacao.Models
         private bool _isMatched;
         private bool _isHighlighted;
         private FormattedString? _nomeFicheiroFormatted;
-        private string? _cachedEstadoDisplay;
 
         public LogItemViewModel(LogAssinaturaFicheiro model)
         {
@@ -36,52 +35,7 @@ namespace RelatorioFaturacao.Models
         public DateTime DataProcessamento => _model.DataProcessamento;
         public string Estado => _model.Estado ?? string.Empty;
 
-        public string EstadoDisplay
-        {
-            get
-            {
-                if (_cachedEstadoDisplay != null)
-                    return _cachedEstadoDisplay;
-
-                if (string.IsNullOrWhiteSpace(Estado))
-                {
-                    _cachedEstadoDisplay = IsOk ? "OK" : "Erro";
-                    return _cachedEstadoDisplay;
-                }
-
-                var trimmed = Estado.Trim();
-                if (trimmed.StartsWith("Rejeitado ICMU", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Rejeitado ICMU";
-                else if (trimmed.StartsWith("Rejeitado", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Rejeitado";
-                else if (trimmed.StartsWith("Erro", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Erro";
-                else if (trimmed.StartsWith("Falha", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Falha";
-                else if (trimmed.StartsWith("Cancelado", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Cancelado";
-                else if (trimmed.StartsWith("Inválido", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("Invalido", StringComparison.OrdinalIgnoreCase))
-                    _cachedEstadoDisplay = "Inválido";
-                else if (IsOk)
-                    _cachedEstadoDisplay = "OK";
-                else
-                {
-                    var firstLine = trimmed.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? trimmed;
-                    if (firstLine.Contains('='))
-                    {
-                        var beforeEquals = firstLine.Split('=')[0].Trim();
-                        if (!string.IsNullOrEmpty(beforeEquals))
-                            firstLine = beforeEquals;
-                    }
-                    if (firstLine.Length > 20)
-                        firstLine = firstLine.Substring(0, 18) + "...";
-
-                    _cachedEstadoDisplay = firstLine;
-                }
-
-                return _cachedEstadoDisplay;
-            }
-        }
+        public string EstadoDisplay => string.IsNullOrWhiteSpace(Estado) ? (IsOk ? "OK" : "Erro") : Estado;
 
         public string EstadoButtonText => IsErro ? $"⚠ {EstadoDisplay}" : $"✓ {EstadoDisplay}";
 
@@ -120,25 +74,14 @@ namespace RelatorioFaturacao.Models
                 s.StartsWith("Fail", StringComparison.OrdinalIgnoreCase) ||
                 s.StartsWith("Falh", StringComparison.OrdinalIgnoreCase) ||
                 s.StartsWith("Inv", StringComparison.OrdinalIgnoreCase) ||
-                s.StartsWith("Canc", StringComparison.OrdinalIgnoreCase))
+                s.StartsWith("Canc", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("Não Encontrado", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("Nao Encontrado", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            return s.Equals("OK", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Sucesso", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Success", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Concluído", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Concluido", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Processado", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Assinado", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Emitido", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Finalizado", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Válido", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Valido", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("Sim", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("True", StringComparison.OrdinalIgnoreCase)
-                || s.Equals("1", StringComparison.OrdinalIgnoreCase);
+            return true;
         }
 
         public bool IsMatched
@@ -169,9 +112,11 @@ namespace RelatorioFaturacao.Models
             if (string.IsNullOrWhiteSpace(search)) return true;
 
             return NomeFicheiro.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   Estado.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                    EstadoDisplay.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                    DataFormatada.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                   numRetry.ToString().Contains(search, StringComparison.OrdinalIgnoreCase);
+                   numRetry.ToString().Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   MensagemErro.Contains(search, StringComparison.OrdinalIgnoreCase);
         }
 
         public void UpdateHighlight(string searchText)
